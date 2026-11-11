@@ -28,6 +28,9 @@
     .modal-panel{max-height:min(88vh,760px)}
     button:focus-visible,input:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
     .modal-backdrop{overscroll-behavior:contain}
+    .kp-btn,.kp-action-btn{min-height:46px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+    body.keypad-open main{padding-bottom:22rem}
+    @media(max-height:700px){.kp-btn,.kp-action-btn{min-height:40px;padding-top:.45rem;padding-bottom:.45rem}}
   </style>
 </head>
 <body class="min-h-full font-sans antialiased bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-500 selection:text-white">
@@ -56,7 +59,7 @@
     </div>
 
     <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-slate-400">
-      <div class="flex items-center gap-2 min-w-0"><i data-lucide="calculator" class="w-4 h-4 text-brand-500 shrink-0"></i><span>Smart inputs: type <strong class="text-slate-200 font-mono">10+10</strong>, <strong class="text-slate-200 font-mono">50*1.1</strong> or use brackets.</span></div>
+      <div class="flex items-center gap-2 min-w-0"><i data-lucide="calculator" class="w-4 h-4 text-brand-500 shrink-0"></i><span>Smart inputs: use the keypad for <strong class="text-slate-200 font-mono">+</strong>, <strong class="text-slate-200 font-mono">−</strong>, <strong class="text-slate-200 font-mono">×</strong>, <strong class="text-slate-200 font-mono">÷</strong> and brackets, or switch to your phone keyboard.</span></div>
       <span class="text-[10px] text-slate-500 shrink-0">USD-based rates</span>
     </div>
 
@@ -111,9 +114,40 @@
     </div>
   </div>
 
-  <!-- Keypad drawer -->
-  <div id="keypad-drawer" class="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2.5 hidden fixed bottom-0 left-0 right-0 z-40 shadow-2xl safe-bottom">
-    <div class="max-w-md mx-auto grid grid-cols-5 gap-1.5"><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="+">+</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="-">−</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="*">×</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="/">÷</button><button id="kp-backspace" class="p-2.5 bg-slate-800/80 hover:bg-slate-700 active:bg-rose-600 rounded-lg text-rose-400 font-bold flex items-center justify-center text-sm"><i data-lucide="delete" class="w-4 h-4"></i></button></div>
+  <!-- Mobile calculator keypad -->
+  <div id="keypad-drawer" class="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2.5 hidden fixed bottom-0 left-0 right-0 z-40 shadow-2xl safe-bottom" aria-label="Calculator keypad">
+    <div class="max-w-md mx-auto">
+      <div class="flex items-center justify-between gap-2 mb-2 px-0.5">
+        <span class="text-[10px] font-bold tracking-wider text-slate-400">CALCULATOR KEYPAD</span>
+        <button id="kp-use-phone" type="button" class="text-[11px] font-semibold text-brand-300 hover:text-white px-2 py-1 rounded-lg hover:bg-slate-800">Use phone keyboard</button>
+      </div>
+      <div class="grid grid-cols-4 gap-1.5">
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="7">7</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="8">8</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="9">9</button>
+        <button class="kp-btn rounded-lg bg-brand-600/20 hover:bg-brand-600/40 active:bg-brand-600 text-brand-300 font-bold text-base" data-val="/">÷</button>
+
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="4">4</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="5">5</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="6">6</button>
+        <button class="kp-btn rounded-lg bg-brand-600/20 hover:bg-brand-600/40 active:bg-brand-600 text-brand-300 font-bold text-base" data-val="*">×</button>
+
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="1">1</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="2">2</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="3">3</button>
+        <button class="kp-btn rounded-lg bg-brand-600/20 hover:bg-brand-600/40 active:bg-brand-600 text-brand-300 font-bold text-base" data-val="-">−</button>
+
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="(" >(</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val="0">0</button>
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val=")">)</button>
+        <button class="kp-btn rounded-lg bg-brand-600/20 hover:bg-brand-600/40 active:bg-brand-600 text-brand-300 font-bold text-base" data-val="+">+</button>
+
+        <button class="kp-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-brand-600 text-slate-100 font-bold text-base" data-val=".">.</button>
+        <button id="kp-clear" type="button" class="kp-action-btn rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-rose-700 text-slate-300 font-semibold text-xs">Clear</button>
+        <button id="kp-backspace" type="button" class="kp-action-btn rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-rose-700 text-rose-300 font-semibold text-xs flex items-center justify-center gap-1"><i data-lucide="delete" class="w-4 h-4"></i><span>Delete</span></button>
+        <button id="kp-done" type="button" class="kp-action-btn rounded-lg bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white font-semibold text-xs">Done</button>
+      </div>
+    </div>
   </div>
 
   <!-- Message modal -->
@@ -145,9 +179,52 @@
     presets:[]
   };
   let activeInputEl = null;
+  let preferNativeKeyboard = false;
   let currentShareUrl = '';
 
   const $ = (id) => document.getElementById(id);
+  const supportsCustomKeypad = () => (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints || 0) > 0;
+  function updateKeyboardModeButtons() {
+    document.querySelectorAll('.input-mode-toggle').forEach(button => {
+      button.textContent = preferNativeKeyboard ? '123' : '⌨';
+      button.title = preferNativeKeyboard ? 'Use calculator keypad' : 'Switch to phone keyboard';
+      button.setAttribute('aria-label', button.title);
+    });
+  }
+  function toggleKeyboardMode(code) {
+    const input = $(`input-${code}`);
+    if (!input) return;
+    activeInputEl = input;
+    preferNativeKeyboard = !preferNativeKeyboard;
+    input.inputMode = preferNativeKeyboard ? 'text' : (supportsCustomKeypad() ? 'none' : 'decimal');
+    updateKeyboardModeButtons();
+    // Blur/refocus makes Android/Samsung Keyboard pick up the changed inputMode.
+    input.blur();
+    input.focus({preventScroll:true});
+    showKeypadDrawer(!preferNativeKeyboard);
+  }
+  function dispatchInputUpdate(input) {
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+  function insertAtCursor(value) {
+    if (!activeInputEl) return;
+    const input = activeInputEl;
+    const start = Number.isInteger(input.selectionStart) ? input.selectionStart : input.value.length;
+    const end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+    input.setRangeText(String(value), start, end, 'end');
+    dispatchInputUpdate(input);
+    input.focus({preventScroll:true});
+  }
+  function deleteAtCursor() {
+    if (!activeInputEl) return;
+    const input = activeInputEl;
+    let start = Number.isInteger(input.selectionStart) ? input.selectionStart : input.value.length;
+    let end = Number.isInteger(input.selectionEnd) ? input.selectionEnd : start;
+    if (start === end && start > 0) start -= 1;
+    if (start !== end) input.setRangeText('', start, end, 'start');
+    dispatchInputUpdate(input);
+    input.focus({preventScroll:true});
+  }
   const isValidCode = (code) => Object.prototype.hasOwnProperty.call(CURRENCIES, code);
   const clone = (obj) => JSON.parse(JSON.stringify(obj));
   const uniqueValidCodes = (codes) => [...new Set((Array.isArray(codes) ? codes : []).map(x => String(x).trim().toUpperCase()).filter(isValidCode))].slice(0, MAX_FAVORITES);
@@ -397,7 +474,7 @@
           <div class="flex items-center gap-2.5 min-w-0"><span class="text-2xl leading-none select-none">${info.flag}</span><div class="min-w-0"><div class="flex items-center gap-1.5"><span class="font-bold text-sm text-slate-100">${info.code}</span>${isBase ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-md">BASE</span>' : ''}</div><span class="text-xs text-slate-400 block truncate max-w-[130px] sm:max-w-[180px]">${info.name}</span></div></div>
           <div class="flex items-center gap-2 shrink-0">${!isBase ? `<div class="text-right text-[11px] text-slate-400 font-mono hidden xs:block">1 ${state.activeBaseCurrency} = ${formatCurrencyValue(convertAmount(1,state.activeBaseCurrency,code))}</div>` : ''}<div class="flex flex-col gap-0.5 ml-1"><button class="btn-move-up p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''} title="Move up" aria-label="Move ${code} up"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button><button class="btn-move-down p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded ${index === state.favorites.length-1 ? 'opacity-20 cursor-not-allowed' : ''}" ${index === state.favorites.length-1 ? 'disabled' : ''} title="Move down" aria-label="Move ${code} down"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button></div></div>
         </div>
-        <div class="relative flex items-center mt-1"><span class="absolute left-3 font-semibold text-slate-400 text-base select-none">${info.symbol}</span><input type="text" id="input-${code}" data-code="${code}" value="${escapeAttribute(value)}" placeholder="0" autocomplete="off" inputmode="decimal" class="w-full bg-slate-950/80 border ${isBase ? 'border-brand-500/60 focus:border-brand-500' : 'border-slate-800 focus:border-slate-700'} rounded-xl pl-9 pr-3 py-2.5 text-right font-mono font-bold text-lg text-slate-100 focus:outline-none transition-colors" aria-label="Amount in ${info.name}"></div>
+        <div class="relative flex items-center mt-1"><span class="absolute left-3 font-semibold text-slate-400 text-base select-none">${info.symbol}</span><input type="text" id="input-${code}" data-code="${code}" value="${escapeAttribute(value)}" placeholder="0" autocomplete="off" inputmode="${supportsCustomKeypad() ? 'none' : 'decimal'}" class="w-full bg-slate-950/80 border ${isBase ? 'border-brand-500/60 focus:border-brand-500' : 'border-slate-800 focus:border-slate-700'} rounded-xl pl-9 pr-14 py-2.5 text-right font-mono font-bold text-lg text-slate-100 focus:outline-none transition-colors" aria-label="Amount in ${info.name}"><button type="button" class="input-mode-toggle absolute right-2 top-1/2 -translate-y-1/2 min-w-9 min-h-9 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-brand-300 text-xs font-bold" data-code="${code}" aria-label="Switch to phone keyboard" title="Switch to phone keyboard">⌨</button></div>
         ${isBase && /[+\-*/()]/.test(state.activeRawInput) ? `<div class="expression-preview mt-1.5 flex justify-end items-center gap-1.5 text-xs text-brand-400 font-mono"><span>= ${formatCurrencyValue(state.evaluatedBaseValue)} ${info.code}</span></div>` : ''}`;
       container.appendChild(card);
       card.querySelector('.btn-move-up').addEventListener('click', () => moveFavorite(index,-1));
@@ -417,8 +494,10 @@
           activeInputEl?.focus();
           if (activeInputEl) activeInputEl.setSelectionRange(activeInputEl.value.length, activeInputEl.value.length);
         }
-        showKeypadDrawer(true);
+        input.inputMode = preferNativeKeyboard ? 'text' : (supportsCustomKeypad() ? 'none' : 'decimal');
+        showKeypadDrawer(!preferNativeKeyboard);
       });
+      card.querySelector('.input-mode-toggle').addEventListener('click', () => toggleKeyboardMode(code));
       input.addEventListener('input', () => {
         if (code !== state.activeBaseCurrency) {
           const oldBase = state.activeBaseCurrency;
@@ -618,7 +697,7 @@
     else { const msg=document.createElement('p'); msg.className='text-xs text-slate-600 text-center'; msg.textContent='QR library did not load. Copy the link instead.'; target.appendChild(msg); }
   }
 
-  function showKeypadDrawer(show) { $('keypad-drawer').classList.toggle('hidden',!show); }
+  function showKeypadDrawer(show) { $('keypad-drawer').classList.toggle('hidden',!show); document.body.classList.toggle('keypad-open',show); }
 
   function bindEvents() {
     $('custom-modal-close').addEventListener('click',closeMessage);
@@ -638,9 +717,12 @@
     $('whatsapp-share-btn').addEventListener('click',()=>{const text=`My TravelFx currency setup: ${snapshotFromState().favorites.join(', ')}\n${currentShareUrl}`;window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener');});
     $('toggle-qr-btn').addEventListener('click',showQrCode);
     $('refresh-rates-btn').addEventListener('click',()=>fetchRates({force:true}));
-    document.querySelectorAll('.kp-btn').forEach(btn=>btn.addEventListener('click',()=>{if(!activeInputEl)return;activeInputEl.value+=btn.dataset.val;activeInputEl.dispatchEvent(new Event('input',{bubbles:true}));activeInputEl.focus();}));
-    $('kp-backspace').addEventListener('click',()=>{if(!activeInputEl)return;activeInputEl.value=activeInputEl.value.slice(0,-1);activeInputEl.dispatchEvent(new Event('input',{bubbles:true}));activeInputEl.focus();});
-    document.addEventListener('pointerdown',e=>{if(!e.target.closest('#keypad-drawer')&&!e.target.closest('#currency-list input'))showKeypadDrawer(false);});
+    document.querySelectorAll('.kp-btn').forEach(btn=>btn.addEventListener('click',()=>insertAtCursor(btn.dataset.val)));
+    $('kp-backspace').addEventListener('click',deleteAtCursor);
+    $('kp-clear').addEventListener('click',()=>{if(!activeInputEl)return;activeInputEl.value='';activeInputEl.setSelectionRange(0,0);dispatchInputUpdate(activeInputEl);activeInputEl.focus({preventScroll:true});});
+    $('kp-done').addEventListener('click',()=>{showKeypadDrawer(false);activeInputEl?.blur();});
+    $('kp-use-phone').addEventListener('click',()=>{if(!activeInputEl)return;const code=activeInputEl.dataset.code; if(!preferNativeKeyboard) toggleKeyboardMode(code);});
+    document.addEventListener('pointerdown',e=>{if(!e.target.closest('#keypad-drawer')&&!e.target.closest('#currency-list input')&&!e.target.closest('.input-mode-toggle'))showKeypadDrawer(false);});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){['fav-modal','presets-modal','share-modal','custom-modal'].forEach(closeModal);showKeypadDrawer(false);}});
     window.addEventListener('hashchange',()=>{const snapshot=readSnapshotFromHash();if(snapshot){applySnapshot(snapshot,{updateUrl:false,save:true});}});
   }

@@ -1,32 +1,29 @@
-# TravelFx upgraded
+# TravelFx – Mobile keypad update
 
-A static HTML/CSS/JavaScript currency converter. No build step is required.
+This is the next static-site update for TravelFx. It keeps the existing currency conversion, saved presets, snapshot sharing, QR sharing, and exchange-rate cache, and improves expression entry on touchscreens.
 
-## Included
+## What's new
 
-- `index.html` – the app
-- `manifest.webmanifest` – installable web-app metadata
-- `sw.js` – basic offline app-shell caching
-- `icon-192.png` and `icon-512.png` – app icons
+- A full 4-column calculator keypad with digits, decimal point, brackets, and `+`, `−`, `×`, `÷` operators.
+- Larger touch targets (at least 46 px on typical phone screens).
+- Cursor-aware insertion and deletion, so a key can be inserted in the middle of an expression instead of only at the end.
+- Clear, Delete, and Done controls.
+- On touch devices, the app uses its own keypad by default to avoid the Samsung decimal-only keyboard.
+- Tap the small keyboard button beside an amount field, or **Use phone keyboard** in the keypad, to switch to the normal phone keyboard. Tap `123` to switch back.
+- Service-worker cache version updated so deployed devices can receive the new app shell.
 
-## Deploy to Cloudflare Pages
+## Deploy the update to GitHub Pages
 
-1. Create a GitHub repository (for example, `travelfx`).
-2. Upload all files in this folder to the repository root.
-3. In Cloudflare Pages, create a project and connect the repository.
-4. Choose **None** as the framework preset. Leave the build command blank and set the output directory to `/` (the repository root).
-5. Deploy. Cloudflare will provide a `*.pages.dev` URL.
+1. Download and extract this ZIP file.
+2. Open your existing `travelfx` GitHub repository.
+3. Upload the files from this folder to the repository root, replacing the existing files when prompted. In particular, replace `index.html` and `sw.js`.
+4. Commit the changes. GitHub Pages will publish the update using your existing Pages configuration.
+5. Open TravelFx on your phone and refresh. If you installed it as a PWA, close and reopen it after the site has updated.
 
-The app uses no server-side build process. For PWA installation, serve it over HTTPS (Cloudflare Pages does this automatically).
-
-## Saving and sharing
-
-- Local presets are saved in the current browser's `localStorage` and are not automatically synced between devices.
-- Share links encode a versioned snapshot in the URL hash. Anyone with the link can load that exact currency list and base currency.
-- A snapshot link does not update when the original user later changes a preset. True persistent shared links need a database and an authenticated editing flow; Supabase can be added as a separate next step.
+The ZIP includes `index.html`, `sw.js`, `manifest.webmanifest`, and the existing app icons. It does not require a build step.
 
 ## Notes
 
-- Rates are fetched from `https://open.er-api.com/v6/latest/USD` and cached locally for up to 12 hours. The manually triggered refresh bypasses the cache.
-- The app includes indicative conversion rates and is not intended as a source of transaction quotes.
-- Tailwind CSS, Lucide icons and QRCode.js are loaded from public CDNs. An internet connection is needed to load those libraries unless you vendor them locally.
+- Local presets remain stored in the current browser's local storage.
+- Share links remain URL snapshots and are not changed by this update.
+- Exchange rates continue to be fetched from `https://open.er-api.com/v6/latest/USD` and cached locally.
