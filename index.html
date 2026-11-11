@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020617">
+  <meta name="description" content="TravelFx — a simple multi-currency converter with shareable currency presets.">
+  <title>TravelFx – Multi-Currency Converter</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#eff6ff',100:'#dbeafe',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8' } },
+          screens: { xs:'400px' }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:rgba(15,23,42,.6)}::-webkit-scrollbar-thumb{background:rgba(51,65,85,.8);border-radius:4px}
+    input,button{ -webkit-tap-highlight-color:transparent }
+    .safe-bottom{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
+    .modal-panel{max-height:min(88vh,760px)}
+    button:focus-visible,input:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
+    .modal-backdrop{overscroll-behavior:contain}
+  </style>
+</head>
+<body class="min-h-full font-sans antialiased bg-slate-950 text-slate-100 flex flex-col selection:bg-brand-500 selection:text-white">
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-md mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30 shrink-0"><i data-lucide="coins" class="w-5 h-5"></i></div>
+        <div class="min-w-0">
+          <h1 class="font-bold text-base leading-none text-slate-100">TravelFx</h1>
+          <span class="text-[10px] text-slate-400">Multi-Currency Converter</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <button id="share-link-btn" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Share current setup" aria-label="Share current setup"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+        <button id="refresh-rates-btn" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Refresh exchange rates" aria-label="Refresh exchange rates"><i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i></button>
+        <button id="manage-presets-btn" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"><i data-lucide="bookmark" class="w-3.5 h-3.5"></i><span class="hidden xs:inline">Presets</span></button>
+        <button id="manage-favs-btn" class="px-2.5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-600/20 transition-all"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i><span>Currencies</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto w-full flex-1 p-4 flex flex-col gap-4 pb-24">
+    <div id="status-bar" class="hidden text-xs px-3 py-2 rounded-xl flex items-center justify-between gap-2 transition-all" role="status" aria-live="polite">
+      <div class="flex items-center gap-2 min-w-0"><i data-lucide="info" class="w-4 h-4 shrink-0"></i><span id="status-text" class="min-w-0">Fetching exchange rates...</span></div>
+      <span id="status-time" class="text-[10px] opacity-75 shrink-0"></span>
+    </div>
+
+    <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-slate-400">
+      <div class="flex items-center gap-2 min-w-0"><i data-lucide="calculator" class="w-4 h-4 text-brand-500 shrink-0"></i><span>Smart inputs: type <strong class="text-slate-200 font-mono">10+10</strong>, <strong class="text-slate-200 font-mono">50*1.1</strong> or use brackets.</span></div>
+      <span class="text-[10px] text-slate-500 shrink-0">USD-based rates</span>
+    </div>
+
+    <div class="flex items-center justify-between px-1">
+      <div><h2 class="text-sm font-bold text-slate-100">Your currencies</h2><p class="text-[11px] text-slate-500">Tap an amount to make it the base currency</p></div>
+      <button id="save-quick-preset-btn" class="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Save preset</button>
+    </div>
+    <div id="currency-list" class="flex flex-col gap-3"></div>
+    <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center text-slate-500 gap-3">
+      <i data-lucide="coins" class="w-12 h-12 stroke-1"></i><p class="text-sm">No currencies added to your dashboard.</p>
+      <button id="add-first-currency-btn" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-medium">Add currencies</button>
+    </div>
+    <div class="text-[10px] text-slate-600 text-center leading-relaxed">Indicative exchange rates. Not a quote for financial transactions.<br>Rates provided by <a class="underline hover:text-slate-400" href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</div>
+  </main>
+
+  <!-- Manage currencies modal -->
+  <div id="fav-modal" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-panel bg-slate-900 w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-800 flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div><h2 class="font-bold text-slate-100 text-base">Manage currencies</h2><p class="text-xs text-slate-400">Select up to 6 currencies for your dashboard</p></div>
+        <button id="close-modal-btn" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-3 border-b border-slate-800/60 bg-slate-950/40"><div class="relative"><i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="search" id="currency-search" placeholder="Search by name or code (e.g. JPY)..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500"></div></div>
+      <div id="all-currencies-list" class="overflow-y-auto p-3 flex flex-col gap-1.5 flex-1 divide-y divide-slate-800/40"></div>
+      <div class="p-3 border-t border-slate-800 bg-slate-900 flex justify-between items-center text-xs"><span id="fav-count-badge" class="text-slate-400 font-medium">0 / 6 selected</span><button id="done-modal-btn" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl">Done</button></div>
+    </div>
+  </div>
+
+  <!-- Presets modal -->
+  <div id="presets-modal" class="modal-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="modal-panel bg-slate-900 w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-800 flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between"><div><h2 class="font-bold text-slate-100 text-base">Saved presets</h2><p class="text-xs text-slate-400">Saved on this device and browser</p></div><button id="close-presets-btn" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="p-3 border-b border-slate-800 bg-slate-950/40">
+        <label for="preset-name-input" class="block text-[11px] text-slate-400 mb-1.5">Save the current currency layout</label>
+        <div class="flex gap-2"><input id="preset-name-input" maxlength="40" type="text" placeholder="e.g. Japan trip" class="min-w-0 flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500"><button id="save-current-preset-btn" class="px-3 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold whitespace-nowrap">Save preset</button></div>
+        <p class="text-[10px] text-slate-500 mt-2">Load a preset, edit your currencies, then choose Update to overwrite it. Share creates a snapshot link.</p>
+      </div>
+      <div id="saved-presets-list" class="overflow-y-auto p-3 flex-1 flex flex-col gap-2"></div>
+      <div class="p-3 border-t border-slate-800 text-[10px] text-slate-500">Presets stay in this browser. Export or share links before clearing browser data.</div>
+    </div>
+  </div>
+
+  <!-- Share modal -->
+  <div id="share-modal" class="modal-backdrop fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 w-full max-w-sm rounded-2xl border border-slate-800 p-5 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between"><div><h2 class="font-bold text-slate-100">Share this setup</h2><p class="text-[11px] text-slate-400">A link containing these currencies</p></div><button id="close-share-btn" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg" aria-label="Close"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3"><div class="text-[10px] uppercase tracking-wide text-slate-500 mb-1">Currencies in link</div><div id="share-summary" class="text-xs text-slate-200 font-medium"></div><input id="share-url-input" readonly class="mt-2 w-full bg-transparent text-[11px] text-brand-300 font-mono outline-none" aria-label="Share link"></div>
+      <div class="grid grid-cols-2 gap-2"><button id="copy-share-btn" class="py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2"><i data-lucide="copy" class="w-4 h-4"></i>Copy link</button><button id="whatsapp-share-btn" class="py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2"><i data-lucide="message-circle" class="w-4 h-4"></i>WhatsApp</button></div>
+      <button id="toggle-qr-btn" class="py-2 text-xs font-semibold text-slate-300 hover:text-white flex items-center justify-center gap-2"><i data-lucide="qr-code" class="w-4 h-4"></i>Show QR code</button>
+      <div id="qr-wrap" class="hidden flex-col items-center gap-2 bg-white rounded-xl p-4"><div id="qrcode" class="min-h-[200px] flex items-center justify-center"></div><span class="text-[10px] text-slate-600">Scan to open this currency setup</span></div>
+      <p id="share-feedback" class="text-[10px] text-emerald-400 text-center min-h-3" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- Keypad drawer -->
+  <div id="keypad-drawer" class="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2.5 hidden fixed bottom-0 left-0 right-0 z-40 shadow-2xl safe-bottom">
+    <div class="max-w-md mx-auto grid grid-cols-5 gap-1.5"><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="+">+</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="-">−</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="*">×</button><button class="kp-btn p-2.5 bg-slate-800 hover:bg-slate-700 active:bg-brand-600 rounded-lg text-slate-200 font-bold text-center text-sm" data-val="/">÷</button><button id="kp-backspace" class="p-2.5 bg-slate-800/80 hover:bg-slate-700 active:bg-rose-600 rounded-lg text-rose-400 font-bold flex items-center justify-center text-sm"><i data-lucide="delete" class="w-4 h-4"></i></button></div>
+  </div>
+
+  <!-- Message modal -->
+  <div id="custom-modal" class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4"><div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-xs w-full shadow-2xl flex flex-col gap-3 text-center"><div class="w-10 h-10 mx-auto rounded-full bg-brand-600/20 text-brand-400 flex items-center justify-center border border-brand-500/30"><i data-lucide="info" class="w-5 h-5"></i></div><h3 id="custom-modal-title" class="font-bold text-sm text-slate-100">Notice</h3><p id="custom-modal-message" class="text-xs text-slate-400"></p><button id="custom-modal-close" class="mt-2 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold">OK</button></div></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const CURRENCIES = {
+    SGD:{code:'SGD',name:'Singapore Dollar',symbol:'S$',flag:'🇸🇬'}, MYR:{code:'MYR',name:'Malaysian Ringgit',symbol:'RM',flag:'🇲🇾'}, USD:{code:'USD',name:'US Dollar',symbol:'$',flag:'🇺🇸'}, EUR:{code:'EUR',name:'Euro',symbol:'€',flag:'🇪🇺'}, JPY:{code:'JPY',name:'Japanese Yen',symbol:'¥',flag:'🇯🇵'}, GBP:{code:'GBP',name:'British Pound',symbol:'£',flag:'🇬🇧'}, THB:{code:'THB',name:'Thai Baht',symbol:'฿',flag:'🇹🇭'}, AUD:{code:'AUD',name:'Australian Dollar',symbol:'A$',flag:'🇦🇺'}, CAD:{code:'CAD',name:'Canadian Dollar',symbol:'C$',flag:'🇨🇦'}, CHF:{code:'CHF',name:'Swiss Franc',symbol:'CHF',flag:'🇨🇭'}, CNY:{code:'CNY',name:'Chinese Yuan',symbol:'¥',flag:'🇨🇳'}, HKD:{code:'HKD',name:'Hong Kong Dollar',symbol:'HK$',flag:'🇭🇰'}, IDR:{code:'IDR',name:'Indonesian Rupiah',symbol:'Rp',flag:'🇮🇩'}, INR:{code:'INR',name:'Indian Rupee',symbol:'₹',flag:'🇮🇳'}, KRW:{code:'KRW',name:'South Korean Won',symbol:'₩',flag:'🇰🇷'}, MOP:{code:'MOP',name:'Macanese Pataca',symbol:'MOP$',flag:'🇲🇴'}, NOK:{code:'NOK',name:'Norwegian Krone',symbol:'kr',flag:'🇳🇴'}, SEK:{code:'SEK',name:'Swedish Krona',symbol:'kr',flag:'🇸🇪'}, DKK:{code:'DKK',name:'Danish Krone',symbol:'kr.',flag:'🇩🇰'}, ISK:{code:'ISK',name:'Icelandic Króna',symbol:'kr',flag:'🇮🇸'}, NZD:{code:'NZD',name:'New Zealand Dollar',symbol:'NZ$',flag:'🇳🇿'}, PHP:{code:'PHP',name:'Philippine Peso',symbol:'₱',flag:'🇵🇭'}, TWD:{code:'TWD',name:'New Taiwan Dollar',symbol:'NT$',flag:'🇹🇼'}, VND:{code:'VND',name:'Vietnamese Dong',symbol:'₫',flag:'🇻🇳'}, AED:{code:'AED',name:'UAE Dirham',symbol:'AED',flag:'🇦🇪'}, SAR:{code:'SAR',name:'Saudi Riyal',symbol:'SAR',flag:'🇸🇦'}, CZK:{code:'CZK',name:'Czech Koruna',symbol:'Kč',flag:'🇨🇿'}, HUF:{code:'HUF',name:'Hungarian Forint',symbol:'Ft',flag:'🇭🇺'}, PLN:{code:'PLN',name:'Polish Zloty',symbol:'zł',flag:'🇵🇱'}, TRY:{code:'TRY',name:'Turkish Lira',symbol:'₺',flag:'🇹🇷'}, EGP:{code:'EGP',name:'Egyptian Pound',symbol:'E£',flag:'🇪🇬'}, MXN:{code:'MXN',name:'Mexican Peso',symbol:'$',flag:'🇲🇽'}, BRL:{code:'BRL',name:'Brazilian Real',symbol:'R$',flag:'🇧🇷'}, ZAR:{code:'ZAR',name:'South African Rand',symbol:'R',flag:'🇿🇦'}
+  };
+
+  // Fallback values are only used until a live rate response has been cached.
+  const FALLBACK_RATES = {USD:1,SGD:1.35,MYR:4.72,EUR:0.92,JPY:155.20,GBP:0.79,THB:36.50,AUD:1.51,CAD:1.37,CHF:0.91,CNY:7.23,HKD:7.81,IDR:16200,INR:83.40,KRW:1370,MOP:8.04,NOK:10.85,SEK:10.72,DKK:6.89,ISK:139.5,NZD:1.66,PHP:57.50,TWD:32.40,VND:25400,AED:3.67,SAR:3.75,CZK:23.10,HUF:362,PLN:3.96,TRY:32.25,EGP:47.40,MXN:16.80,BRL:5.15,ZAR:18.50};
+  const STORAGE_KEY = 'travelfx_state_v6';
+  const LEGACY_STORAGE_KEY = 'travelfx_state_v5';
+  const RATE_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+  const MAX_FAVORITES = 6;
+
+  let state = {
+    favorites:['SGD','MYR','USD','JPY','EUR','SEK'],
+    activeBaseCurrency:'SGD',
+    activeRawInput:'100',
+    evaluatedBaseValue:100,
+    rates:{...FALLBACK_RATES},
+    lastUpdated:null,
+    lastFetchedAt:null,
+    presets:[]
+  };
+  let activeInputEl = null;
+  let currentShareUrl = '';
+
+  const $ = (id) => document.getElementById(id);
+  const isValidCode = (code) => Object.prototype.hasOwnProperty.call(CURRENCIES, code);
+  const clone = (obj) => JSON.parse(JSON.stringify(obj));
+  const uniqueValidCodes = (codes) => [...new Set((Array.isArray(codes) ? codes : []).map(x => String(x).trim().toUpperCase()).filter(isValidCode))].slice(0, MAX_FAVORITES);
+
+  function iconRefresh() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
+  function showMessage(title, message) {
+    $('custom-modal-title').textContent = title;
+    $('custom-modal-message').textContent = message;
+    $('custom-modal').classList.remove('hidden');
+    $('custom-modal').classList.add('flex');
+    iconRefresh();
+  }
+  function closeMessage() { $('custom-modal').classList.add('hidden'); $('custom-modal').classList.remove('flex'); }
+
+  function formatCurrencyValue(value) {
+    if (!Number.isFinite(value)) return '—';
+    const digits = Math.abs(value) < 1 ? 4 : 2;
+    return value.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:digits});
+  }
+  function compactNumber(value) {
+    if (!Number.isFinite(value)) return '0';
+    return String(Number(value.toFixed(8)));
+  }
+  function convertAmount(amount, fromCode, toCode) {
+    const fromRate = Number(state.rates[fromCode]);
+    const toRate = Number(state.rates[toCode]);
+    if (!Number.isFinite(fromRate) || !Number.isFinite(toRate) || fromRate <= 0 || toRate <= 0) return NaN;
+    return (amount / fromRate) * toRate;
+  }
+
+  // A small recursive-descent parser for +, -, *, / and parentheses. No dynamic code execution.
+  function safeEvaluateMath(expression) {
+    if (typeof expression !== 'string' || !expression.trim()) return 0;
+    const input = expression.replace(/[×]/g,'*').replace(/[÷]/g,'/').replace(/,/g,'').trim();
+    if (!/^[0-9+\-*/().\s]+$/.test(input)) return NaN;
+    let pos = 0;
+    const skip = () => { while (/\s/.test(input[pos] || '')) pos++; };
+    function parseExpression() {
+      let value = parseTerm();
+      while (true) {
+        skip(); const op = input[pos];
+        if (op !== '+' && op !== '-') break;
+        pos++; const rhs = parseTerm(); value = op === '+' ? value + rhs : value - rhs;
+      }
+      return value;
+    }
+    function parseTerm() {
+      let value = parseUnary();
+      while (true) {
+        skip(); const op = input[pos];
+        if (op !== '*' && op !== '/') break;
+        pos++; const rhs = parseUnary();
+        if (op === '/' && rhs === 0) throw new Error('Division by zero');
+        value = op === '*' ? value * rhs : value / rhs;
+      }
+      return value;
+    }
+    function parseUnary() {
+      skip();
+      if (input[pos] === '+') { pos++; return parseUnary(); }
+      if (input[pos] === '-') { pos++; return -parseUnary(); }
+      return parsePrimary();
+    }
+    function parsePrimary() {
+      skip();
+      if (input[pos] === '(') {
+        pos++; const value = parseExpression(); skip();
+        if (input[pos] !== ')') throw new Error('Missing closing bracket');
+        pos++; return value;
+      }
+      const match = input.slice(pos).match(/^(?:\d+\.?\d*|\.\d+)/);
+      if (!match) throw new Error('Expected a number');
+      pos += match[0].length;
+      return Number(match[0]);
+    }
+    try {
+      const result = parseExpression(); skip();
+      if (pos !== input.length || !Number.isFinite(result)) return NaN;
+      return result;
+    } catch (_) { return NaN; }
+  }
+
+  function snapshotFromState(source = state) {
+    return {
+      favorites: uniqueValidCodes(source.favorites),
+      base: uniqueValidCodes(source.favorites).includes(source.activeBaseCurrency) ? source.activeBaseCurrency : (source.favorites[0] || 'SGD')
+    };
+  }
+  function makeSnapshotUrl(source = state) {
+    const snapshot = snapshotFromState(source);
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams();
+    params.set('v','1');
+    params.set('fav', snapshot.favorites.join(','));
+    params.set('base', snapshot.base);
+    url.hash = params.toString();
+    return url.toString();
+  }
+  function updateAddressBar() {
+    try {
+      const nextUrl = makeSnapshotUrl();
+      history.replaceState(null, '', nextUrl);
+    } catch (error) { console.warn('Could not update share URL:', error); }
+  }
+
+  function readSnapshotFromHash() {
+    const raw = window.location.hash.slice(1);
+    if (!raw) return null;
+    // Current format: #v=1&fav=SGD,MYR&base=SGD
+    if (raw.includes('=') || raw.includes('&')) {
+      const params = new URLSearchParams(raw);
+      if (params.get('v') !== '1') return null;
+      const favorites = uniqueValidCodes((params.get('fav') || '').split(','));
+      if (!favorites.length) return null;
+      const wantedBase = (params.get('base') || '').toUpperCase();
+      return {favorites, base:favorites.includes(wantedBase) ? wantedBase : favorites[0]};
+    }
+    // Backward compatibility with old links such as #SGD-MYR-USD.
+    const favorites = uniqueValidCodes(raw.split(/[-,/]/));
+    return favorites.length ? {favorites, base:favorites[0]} : null;
+  }
+
+  function persistState({updateUrl = true} = {}) {
+    const payload = {
+      version:6,
+      favorites:state.favorites,
+      activeBaseCurrency:state.activeBaseCurrency,
+      presets:state.presets,
+      rates:state.rates,
+      lastUpdated:state.lastUpdated,
+      lastFetchedAt:state.lastFetchedAt
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); }
+    catch (error) { console.warn('TravelFx could not save local data:', error); }
+    if (updateUrl) updateAddressBar();
+  }
+
+  function loadLocalState() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY); }
+    catch (_) { return; }
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw);
+      const favorites = uniqueValidCodes(saved.favorites);
+      if (favorites.length) state.favorites = favorites;
+      if (favorites.includes(saved.activeBaseCurrency)) state.activeBaseCurrency = saved.activeBaseCurrency;
+      if (Array.isArray(saved.presets)) {
+        state.presets = saved.presets.filter(p => p && typeof p.name === 'string' && Array.isArray(p.favorites)).map(p => ({
+          id:typeof p.id === 'string' ? p.id : createId(),
+          name:p.name.slice(0,40),
+          favorites:uniqueValidCodes(p.favorites),
+          base:uniqueValidCodes(p.favorites).includes(p.base) ? p.base : uniqueValidCodes(p.favorites)[0],
+          createdAt:Number(p.createdAt) || Date.now(),
+          updatedAt:Number(p.updatedAt) || Date.now()
+        })).filter(p => p.favorites.length);
+      }
+      if (saved.rates && typeof saved.rates === 'object') {
+        const cleaned = {};
+        for (const [code, rate] of Object.entries(saved.rates)) if (isValidCode(code) && Number.isFinite(Number(rate)) && Number(rate) > 0) cleaned[code] = Number(rate);
+        state.rates = {...FALLBACK_RATES, ...cleaned};
+      }
+      state.lastUpdated = typeof saved.lastUpdated === 'string' ? saved.lastUpdated : null;
+      state.lastFetchedAt = Number(saved.lastFetchedAt) || null;
+    } catch (error) { console.warn('Could not read saved TravelFx state:', error); }
+  }
+
+  function applySnapshot(snapshot, {updateUrl = true, save = true} = {}) {
+    if (!snapshot || !snapshot.favorites.length) return;
+    state.favorites = uniqueValidCodes(snapshot.favorites);
+    state.activeBaseCurrency = state.favorites.includes(snapshot.base) ? snapshot.base : state.favorites[0];
+    state.activeRawInput = '100';
+    state.evaluatedBaseValue = 100;
+    if (save) persistState({updateUrl});
+    renderCurrencyList();
+  }
+
+  function setStatus(message, type = 'info', detail = '') {
+    const bar = $('status-bar');
+    bar.classList.remove('hidden','bg-emerald-950/60','text-emerald-400','border-emerald-800','bg-amber-950/60','text-amber-400','border-amber-800','bg-slate-800/80','text-slate-300','border-slate-700');
+    if (type === 'success') bar.classList.add('bg-emerald-950/60','text-emerald-400','border','border-emerald-800/80');
+    else if (type === 'warning') bar.classList.add('bg-amber-950/60','text-amber-400','border','border-amber-800/80');
+    else bar.classList.add('bg-slate-800/80','text-slate-300','border','border-slate-700');
+    $('status-text').textContent = message;
+    $('status-time').textContent = detail;
+    if (type === 'success') window.setTimeout(() => bar.classList.add('hidden'), 5000);
+  }
+  function humanDate(value) {
+    if (!value) return 'Not yet updated';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Last update unknown';
+    return date.toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+  }
+
+  async function fetchRates({force = false} = {}) {
+    const fresh = state.lastFetchedAt && (Date.now() - state.lastFetchedAt < RATE_MAX_AGE_MS);
+    if (!force && fresh) {
+      if (state.lastUpdated) setStatus('Using cached exchange rates', 'info', humanDate(state.lastUpdated));
+      renderCurrencyList();
+      return;
+    }
+    setStatus('Updating exchange rates…', 'info');
+    $('refresh-icon')?.classList.add('animate-spin');
+    try {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 12000);
+      const response = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store', signal:controller.signal});
+      window.clearTimeout(timeout);
+      if (!response.ok) throw new Error(`Rate service returned ${response.status}`);
+      const data = await response.json();
+      if (data.result && data.result !== 'success') throw new Error(data['error-type'] || 'Rate service error');
+      if (!data.rates || typeof data.rates !== 'object') throw new Error('No rate data returned');
+      const incoming = {};
+      for (const [code, rate] of Object.entries(data.rates)) if (isValidCode(code) && Number.isFinite(Number(rate)) && Number(rate) > 0) incoming[code] = Number(rate);
+      if (!incoming.USD) incoming.USD = 1;
+      state.rates = {...FALLBACK_RATES, ...incoming};
+      const timestamp = Number(data.time_last_update_unix) > 0 ? Number(data.time_last_update_unix) * 1000 : Date.now();
+      state.lastFetchedAt = Date.now();
+      state.lastUpdated = new Date(timestamp).toISOString();
+      persistState({updateUrl:false});
+      setStatus('Exchange rates updated', 'success', humanDate(state.lastUpdated));
+    } catch (error) {
+      console.warn('Rate refresh failed:', error);
+      if (state.lastFetchedAt || state.lastUpdated) setStatus('Offline or rate service unavailable — using saved rates', 'warning', humanDate(state.lastUpdated));
+      else setStatus('Could not fetch rates — using built-in estimates', 'warning', 'Check connection');
+    } finally {
+      $('refresh-icon')?.classList.remove('animate-spin');
+      renderCurrencyList();
+    }
+  }
+
+  function renderCurrencyList() {
+    const container = $('currency-list');
+    const emptyState = $('empty-state');
+    container.replaceChildren();
+    if (!state.favorites.length) { emptyState.classList.remove('hidden'); emptyState.classList.add('flex'); return; }
+    emptyState.classList.add('hidden'); emptyState.classList.remove('flex');
+    state.favorites.forEach((code, index) => {
+      const info = CURRENCIES[code];
+      if (!info) return;
+      const isBase = code === state.activeBaseCurrency;
+      const card = document.createElement('div');
+      card.className = `p-4 rounded-2xl border transition-all duration-200 relative ${isBase ? 'bg-slate-900 border-brand-500/80 shadow-lg shadow-brand-500/10 ring-1 ring-brand-500/40' : 'bg-slate-900/70 hover:bg-slate-900 border-slate-800/90'}`;
+      const value = isBase ? state.activeRawInput : formatCurrencyValue(convertAmount(state.evaluatedBaseValue, state.activeBaseCurrency, code));
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-2 gap-2">
+          <div class="flex items-center gap-2.5 min-w-0"><span class="text-2xl leading-none select-none">${info.flag}</span><div class="min-w-0"><div class="flex items-center gap-1.5"><span class="font-bold text-sm text-slate-100">${info.code}</span>${isBase ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold bg-brand-500/20 text-brand-400 border border-brand-500/30 rounded-md">BASE</span>' : ''}</div><span class="text-xs text-slate-400 block truncate max-w-[130px] sm:max-w-[180px]">${info.name}</span></div></div>
+          <div class="flex items-center gap-2 shrink-0">${!isBase ? `<div class="text-right text-[11px] text-slate-400 font-mono hidden xs:block">1 ${state.activeBaseCurrency} = ${formatCurrencyValue(convertAmount(1,state.activeBaseCurrency,code))}</div>` : ''}<div class="flex flex-col gap-0.5 ml-1"><button class="btn-move-up p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded ${index === 0 ? 'opacity-20 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''} title="Move up" aria-label="Move ${code} up"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button><button class="btn-move-down p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded ${index === state.favorites.length-1 ? 'opacity-20 cursor-not-allowed' : ''}" ${index === state.favorites.length-1 ? 'disabled' : ''} title="Move down" aria-label="Move ${code} down"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button></div></div>
+        </div>
+        <div class="relative flex items-center mt-1"><span class="absolute left-3 font-semibold text-slate-400 text-base select-none">${info.symbol}</span><input type="text" id="input-${code}" data-code="${code}" value="${escapeAttribute(value)}" placeholder="0" autocomplete="off" inputmode="decimal" class="w-full bg-slate-950/80 border ${isBase ? 'border-brand-500/60 focus:border-brand-500' : 'border-slate-800 focus:border-slate-700'} rounded-xl pl-9 pr-3 py-2.5 text-right font-mono font-bold text-lg text-slate-100 focus:outline-none transition-colors" aria-label="Amount in ${info.name}"></div>
+        ${isBase && /[+\-*/()]/.test(state.activeRawInput) ? `<div class="expression-preview mt-1.5 flex justify-end items-center gap-1.5 text-xs text-brand-400 font-mono"><span>= ${formatCurrencyValue(state.evaluatedBaseValue)} ${info.code}</span></div>` : ''}`;
+      container.appendChild(card);
+      card.querySelector('.btn-move-up').addEventListener('click', () => moveFavorite(index,-1));
+      card.querySelector('.btn-move-down').addEventListener('click', () => moveFavorite(index,1));
+      const input = card.querySelector(`#input-${code}`);
+      input.addEventListener('focus', () => {
+        activeInputEl = input;
+        if (state.activeBaseCurrency !== code) {
+          const oldBase = state.activeBaseCurrency;
+          const convertedValue = convertAmount(state.evaluatedBaseValue, oldBase, code); // Convert before changing the base.
+          state.activeBaseCurrency = code;
+          state.evaluatedBaseValue = Number.isFinite(convertedValue) ? convertedValue : 0;
+          state.activeRawInput = compactNumber(state.evaluatedBaseValue);
+          persistState();
+          renderCurrencyList();
+          activeInputEl = $(`input-${code}`);
+          activeInputEl?.focus();
+          if (activeInputEl) activeInputEl.setSelectionRange(activeInputEl.value.length, activeInputEl.value.length);
+        }
+        showKeypadDrawer(true);
+      });
+      input.addEventListener('input', () => {
+        if (code !== state.activeBaseCurrency) {
+          const oldBase = state.activeBaseCurrency;
+          const convertedValue = convertAmount(state.evaluatedBaseValue, oldBase, code);
+          state.activeBaseCurrency = code;
+          state.evaluatedBaseValue = Number.isFinite(convertedValue) ? convertedValue : 0;
+        }
+        state.activeRawInput = input.value;
+        const calculated = safeEvaluateMath(input.value);
+        if (Number.isFinite(calculated)) state.evaluatedBaseValue = calculated;
+        updateTargetValuesOnly();
+      });
+    });
+    iconRefresh();
+  }
+
+  function escapeAttribute(value) { return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function updateTargetValuesOnly() {
+    state.favorites.forEach(code => {
+      const input = $(`input-${code}`);
+      if (!input) return;
+      if (code === state.activeBaseCurrency) {
+        const card = input.closest('.rounded-2xl');
+        let preview = card?.querySelector('.expression-preview');
+        const isExpression = /[+\-*/()]/.test(state.activeRawInput);
+        if (isExpression && card) {
+          if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'expression-preview mt-1.5 flex justify-end items-center gap-1.5 text-xs text-brand-400 font-mono';
+            card.appendChild(preview);
+          }
+          preview.textContent = `= ${formatCurrencyValue(state.evaluatedBaseValue)} ${code}`;
+        } else if (preview) {
+          preview.remove();
+        }
+      } else {
+        const converted = convertAmount(state.evaluatedBaseValue, state.activeBaseCurrency, code);
+        input.value = formatCurrencyValue(converted);
+      }
+    });
+  }
+
+  function moveFavorite(index, direction) {
+    const next = index + direction;
+    if (next < 0 || next >= state.favorites.length) return;
+    [state.favorites[index], state.favorites[next]] = [state.favorites[next], state.favorites[index]];
+    persistState(); renderCurrencyList();
+  }
+
+  function openModal(id) { const el = $(id); el.classList.remove('hidden'); el.classList.add('flex'); }
+  function closeModal(id) { const el = $(id); el.classList.add('hidden'); el.classList.remove('flex'); }
+
+  function renderModalCurrencyList(filterText = '') {
+    const container = $('all-currencies-list');
+    container.replaceChildren();
+    $('fav-count-badge').textContent = `${state.favorites.length} / ${MAX_FAVORITES} selected`;
+    const query = filterText.toLowerCase().trim();
+    const codes = Object.keys(CURRENCIES).filter(code => !query || code.toLowerCase().includes(query) || CURRENCIES[code].name.toLowerCase().includes(query));
+    codes.sort((a,b) => {
+      const ai = state.favorites.indexOf(a), bi = state.favorites.indexOf(b);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return a.localeCompare(b);
+    });
+    if (!codes.length) { const empty = document.createElement('p'); empty.className='text-xs text-slate-500 text-center py-8'; empty.textContent='No matching currencies.'; container.appendChild(empty); return; }
+    codes.forEach(code => {
+      const info = CURRENCIES[code], selected = state.favorites.includes(code);
+      const row = document.createElement('button');
+      row.type='button'; row.className=`w-full text-left py-2.5 px-3 flex items-center justify-between rounded-xl transition-colors ${selected ? 'bg-brand-600/10 border border-brand-500/20' : 'hover:bg-slate-800/50'}`;
+      const left=document.createElement('span'); left.className='flex items-center gap-3';
+      const flag=document.createElement('span'); flag.className='text-2xl'; flag.textContent=info.flag;
+      const labels=document.createElement('span'); labels.innerHTML=`<span class="font-bold text-xs text-slate-200">${info.code}</span><span class="block text-[11px] text-slate-400">${info.name}</span>`;
+      left.append(flag,labels);
+      const right=document.createElement('span'); right.className=`w-7 h-7 flex items-center justify-center rounded-lg ${selected ? 'bg-brand-600/20 text-brand-400 border border-brand-500/40' : 'bg-slate-800 text-slate-400'}`; right.innerHTML=`<i data-lucide="${selected ? 'check' : 'plus'}" class="w-4 h-4"></i>`;
+      row.append(left,right); row.addEventListener('click',()=>toggleFavorite(code)); container.appendChild(row);
+    });
+    iconRefresh();
+  }
+
+  function toggleFavorite(code) {
+    const index=state.favorites.indexOf(code);
+    if (index >= 0) {
+      if (state.favorites.length <= 1) { showMessage('Keep at least one currency','Your dashboard needs at least one currency.'); return; }
+      state.favorites.splice(index,1);
+      if (state.activeBaseCurrency===code) { state.activeBaseCurrency=state.favorites[0]; state.activeRawInput='100'; state.evaluatedBaseValue=100; }
+    } else {
+      if (state.favorites.length >= MAX_FAVORITES) { showMessage('Six-currency limit','You can select up to six currencies. Remove one before adding another.'); return; }
+      state.favorites.push(code);
+    }
+    persistState(); renderCurrencyList(); renderModalCurrencyList($('currency-search').value);
+  }
+
+  function createId() { return (window.crypto?.randomUUID?.() || `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`); }
+  function saveCurrentPreset() {
+    const name = $('preset-name-input').value.trim();
+    if (!name) { showMessage('Name your preset','Enter a name such as “Japan trip” before saving.'); $('preset-name-input').focus(); return; }
+    const snapshot=snapshotFromState();
+    const now=Date.now();
+    state.presets.unshift({id:createId(),name:name.slice(0,40),favorites:snapshot.favorites,base:snapshot.base,createdAt:now,updatedAt:now});
+    state.presets=state.presets.slice(0,50);
+    $('preset-name-input').value='';
+    persistState({updateUrl:false});
+    renderPresetsList();
+    setStatus(`Preset “${name.slice(0,40)}” saved on this device`,'success');
+  }
+
+  function renderPresetsList() {
+    const container=$('saved-presets-list'); container.replaceChildren();
+    if (!state.presets.length) {
+      const empty=document.createElement('div'); empty.className='text-center py-10 px-5';
+      empty.innerHTML='<i data-lucide="bookmark-plus" class="w-8 h-8 mx-auto text-slate-600 mb-3"></i><p class="text-sm text-slate-300 font-medium">No saved presets yet</p><p class="text-xs text-slate-500 mt-1">Name your current currency layout above to save it here.</p>';
+      container.appendChild(empty); iconRefresh(); return;
+    }
+    state.presets.forEach(preset => {
+      const card=document.createElement('div'); card.className='rounded-xl border border-slate-800 bg-slate-950/50 p-3';
+      const top=document.createElement('div'); top.className='flex items-start justify-between gap-2';
+      const details=document.createElement('div'); details.className='min-w-0';
+      const title=document.createElement('div'); title.className='font-semibold text-sm text-slate-100 truncate'; title.textContent=preset.name;
+      const codes=document.createElement('div'); codes.className='text-[11px] text-slate-400 mt-1'; codes.textContent=`${preset.favorites.join(' · ')}  •  Base: ${preset.base}`;
+      details.append(title,codes); top.appendChild(details);
+      const date=document.createElement('span'); date.className='text-[9px] text-slate-600 shrink-0'; date.textContent=new Date(preset.updatedAt).toLocaleDateString(); top.appendChild(date);
+      const actions=document.createElement('div'); actions.className='grid grid-cols-6 gap-1 mt-3';
+      const addAction=(label,icon,classes,handler)=>{ const btn=document.createElement('button'); btn.type='button'; btn.className=`py-2 rounded-lg text-[10px] font-semibold flex flex-col items-center justify-center gap-1 ${classes}`; btn.innerHTML=`<i data-lucide="${icon}" class="w-3.5 h-3.5"></i><span>${label}</span>`; btn.addEventListener('click',handler); actions.appendChild(btn); };
+      addAction('Load','folder-open','bg-brand-600/15 text-brand-300 hover:bg-brand-600/25',()=>{applySnapshot({favorites:preset.favorites,base:preset.base});closeModal('presets-modal');setStatus(`Loaded “${preset.name}”`,'success');});
+      addAction('Update','save','bg-slate-800 text-slate-300 hover:bg-slate-700',()=>updatePreset(preset.id));
+      addAction('Share','share-2','bg-slate-800 text-slate-300 hover:bg-slate-700',()=>openShareModal(preset));
+      addAction('Rename','pencil','bg-slate-800 text-slate-300 hover:bg-slate-700',()=>renamePreset(preset.id));
+      addAction('Copy','copy','bg-slate-800 text-slate-300 hover:bg-slate-700',()=>duplicatePreset(preset.id));
+      addAction('Delete','trash-2','bg-rose-950/50 text-rose-300 hover:bg-rose-900/60',()=>deletePreset(preset.id));
+      card.append(top,actions); container.appendChild(card);
+    });
+    iconRefresh();
+  }
+
+  function updatePreset(id) {
+    const preset=state.presets.find(p=>p.id===id); if(!preset) return;
+    if(!window.confirm(`Replace “${preset.name}” with your current currencies (${state.favorites.join(', ')})?`)) return;
+    const snapshot=snapshotFromState();
+    preset.favorites=snapshot.favorites;
+    preset.base=snapshot.base;
+    preset.updatedAt=Date.now();
+    persistState({updateUrl:false});
+    renderPresetsList();
+    setStatus(`Preset “${preset.name}” updated`,'success');
+  }
+
+  function renamePreset(id) {
+    const preset=state.presets.find(p=>p.id===id); if(!preset) return;
+    const name=window.prompt('Enter a new name for this preset:',preset.name);
+    if(name===null) return;
+    if(!name.trim()) { showMessage('Preset name required','A preset must have a name.'); return; }
+    preset.name=name.trim().slice(0,40); preset.updatedAt=Date.now(); persistState({updateUrl:false}); renderPresetsList();
+  }
+  function duplicatePreset(id) {
+    const preset=state.presets.find(p=>p.id===id); if(!preset) return;
+    const copy={...clone(preset),id:createId(),name:`${preset.name} (copy)`.slice(0,40),createdAt:Date.now(),updatedAt:Date.now()};
+    state.presets.unshift(copy); state.presets=state.presets.slice(0,50); persistState({updateUrl:false}); renderPresetsList();
+  }
+  function deletePreset(id) {
+    const preset=state.presets.find(p=>p.id===id); if(!preset) return;
+    if(!window.confirm(`Delete the preset “${preset.name}”? This cannot be undone.`)) return;
+    state.presets=state.presets.filter(p=>p.id!==id); persistState({updateUrl:false}); renderPresetsList();
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch (_) { /* Try the legacy fallback below. */ }
+    const textarea=document.createElement('textarea'); textarea.value=text; textarea.setAttribute('readonly',''); textarea.style.position='fixed'; textarea.style.opacity='0'; document.body.appendChild(textarea); textarea.select();
+    let ok=false; try { ok=document.execCommand('copy'); } catch (_) {} textarea.remove(); return ok;
+  }
+
+  function openShareModal(source = state) {
+    const isPreset = source !== state;
+    currentShareUrl=makeSnapshotUrl(isPreset ? {favorites:source.favorites,activeBaseCurrency:source.base} : state);
+    const snap=snapshotFromState(isPreset ? {favorites:source.favorites,activeBaseCurrency:source.base} : state);
+    $('share-summary').textContent=`${snap.favorites.join(' · ')}  |  Base: ${snap.base}${isPreset ? `  |  ${source.name}` : ''}`;
+    $('share-url-input').value=currentShareUrl;
+    $('share-feedback').textContent='';
+    $('qr-wrap').classList.add('hidden'); $('qr-wrap').classList.remove('flex'); $('toggle-qr-btn').textContent='Show QR code';
+    $('qrcode').replaceChildren();
+    openModal('share-modal');
+    iconRefresh();
+  }
+  async function handleCopyShare() {
+    const ok=await copyText(currentShareUrl);
+    $('share-feedback').textContent=ok ? 'Link copied to clipboard.' : 'Copy was blocked. Select and copy the link above.';
+  }
+  function showQrCode() {
+    const wrap=$('qr-wrap');
+    if (!wrap.classList.contains('hidden')) { wrap.classList.add('hidden'); wrap.classList.remove('flex'); $('toggle-qr-btn').textContent='Show QR code'; return; }
+    wrap.classList.remove('hidden'); wrap.classList.add('flex'); $('toggle-qr-btn').textContent='Hide QR code';
+    const target=$('qrcode'); target.replaceChildren();
+    if (window.QRCode) new QRCode(target,{text:currentShareUrl,width:200,height:200,colorDark:'#020617',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    else { const msg=document.createElement('p'); msg.className='text-xs text-slate-600 text-center'; msg.textContent='QR library did not load. Copy the link instead.'; target.appendChild(msg); }
+  }
+
+  function showKeypadDrawer(show) { $('keypad-drawer').classList.toggle('hidden',!show); }
+
+  function bindEvents() {
+    $('custom-modal-close').addEventListener('click',closeMessage);
+    $('manage-favs-btn').addEventListener('click',()=>{renderModalCurrencyList();openModal('fav-modal');});
+    $('add-first-currency-btn').addEventListener('click',()=>{renderModalCurrencyList();openModal('fav-modal');});
+    $('close-modal-btn').addEventListener('click',()=>closeModal('fav-modal'));
+    $('done-modal-btn').addEventListener('click',()=>closeModal('fav-modal'));
+    $('currency-search').addEventListener('input',e=>renderModalCurrencyList(e.target.value));
+    $('manage-presets-btn').addEventListener('click',()=>{renderPresetsList();openModal('presets-modal');});
+    $('close-presets-btn').addEventListener('click',()=>closeModal('presets-modal'));
+    $('save-current-preset-btn').addEventListener('click',saveCurrentPreset);
+    $('preset-name-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveCurrentPreset();});
+    $('save-quick-preset-btn').addEventListener('click',()=>{renderPresetsList();openModal('presets-modal');$('preset-name-input').focus();});
+    $('share-link-btn').addEventListener('click',()=>openShareModal());
+    $('close-share-btn').addEventListener('click',()=>closeModal('share-modal'));
+    $('copy-share-btn').addEventListener('click',handleCopyShare);
+    $('whatsapp-share-btn').addEventListener('click',()=>{const text=`My TravelFx currency setup: ${snapshotFromState().favorites.join(', ')}\n${currentShareUrl}`;window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener');});
+    $('toggle-qr-btn').addEventListener('click',showQrCode);
+    $('refresh-rates-btn').addEventListener('click',()=>fetchRates({force:true}));
+    document.querySelectorAll('.kp-btn').forEach(btn=>btn.addEventListener('click',()=>{if(!activeInputEl)return;activeInputEl.value+=btn.dataset.val;activeInputEl.dispatchEvent(new Event('input',{bubbles:true}));activeInputEl.focus();}));
+    $('kp-backspace').addEventListener('click',()=>{if(!activeInputEl)return;activeInputEl.value=activeInputEl.value.slice(0,-1);activeInputEl.dispatchEvent(new Event('input',{bubbles:true}));activeInputEl.focus();});
+    document.addEventListener('pointerdown',e=>{if(!e.target.closest('#keypad-drawer')&&!e.target.closest('#currency-list input'))showKeypadDrawer(false);});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'){['fav-modal','presets-modal','share-modal','custom-modal'].forEach(closeModal);showKeypadDrawer(false);}});
+    window.addEventListener('hashchange',()=>{const snapshot=readSnapshotFromHash();if(snapshot){applySnapshot(snapshot,{updateUrl:false,save:true});}});
+  }
+
+  function init() {
+    loadLocalState();
+    const snapshot=readSnapshotFromHash();
+    if(snapshot) {
+      state.favorites=snapshot.favorites;
+      state.activeBaseCurrency=snapshot.base;
+      state.activeRawInput='100'; state.evaluatedBaseValue=100;
+      persistState({updateUrl:false});
+    }
+    renderCurrencyList();
+    bindEvents();
+    iconRefresh();
+    fetchRates();
+    if ('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')) {
+      window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker registration failed:',err)));
+    }
+  }
+
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
+})();
+</script>
+</body>
+</html>
